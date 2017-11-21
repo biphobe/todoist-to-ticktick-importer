@@ -1,0 +1,6 @@
+.idea
+yarn.lock
+*.log
+node_modules
+.env
+exported.csv
