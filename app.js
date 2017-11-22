@@ -29,6 +29,15 @@ function generateCsv(content, template) {
         .replace("{{content}}", content);
 }
 
+function convertArrayToObject(array, key) {
+    return array
+        .reduce((obj, value) => {
+            obj[value[key]] = value;
+
+            return obj;
+        }, {});
+}
+
 getTodoistData(todoistToken)
     .then(console.log)
     .catch(console.error);
