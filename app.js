@@ -39,5 +39,20 @@ function convertArrayToObject(array, key) {
 }
 
 getTodoistData(todoistToken)
-    .then(console.log)
+    .then(result => {
+        const projects = convertArrayToObject(result.projects, "id");
+        const labels = convertArrayToObject(result.labels, "id");
+
+        result.items.forEach((task, index) => {
+            if(!task.labels.length) {
+                return;
+            }
+
+            const labelString = task.labels.map(id => labels[id].name).join(" #");
+
+            task.content += ` #${labelString}`;
+
+            result.items[index] = task;
+        });
+    })
     .catch(console.error);
