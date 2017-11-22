@@ -4,6 +4,7 @@ const fetch = require("node-fetch");
 
 require('dotenv').config();
 
+const timezone = process.env.TIMEZONE;
 const todoistToken = process.env.TODOIST_TOKEN;
 const csvTemplate = fs.readFileSync("template.csv", "utf8");
 
@@ -44,21 +45,30 @@ function createCsvRow(project, title, content, reminder, timezone) {
     return values.map(el => `"${el}"`).join(", ");
 }
 
+function createTask(projects, labels, item) {
+    const title = item.content;
+    const project = projects[item.project_id].name;
+    const content = "";
+
+    const task = { title, project, content };
+
+    if(item.length) {
+        const labelString = item.labels.map(id => labels[id].name).join(" #");
+
+        task.title += ` #${labelString}`;
+    }
+
+    return task;
+}
+
 getTodoistData(todoistToken)
     .then(result => {
         const projects = convertArrayToObject(result.projects, "id");
         const labels = convertArrayToObject(result.labels, "id");
 
-        result.items.forEach((task, index) => {
-            if(!task.labels.length) {
-                return;
-            }
+        const tasks = result.items
+            .map((item) => createTask(projects, labels, item));
 
-            const labelString = task.labels.map(id => labels[id].name).join(" #");
-
-            task.content += ` #${labelString}`;
-
-            result.items[index] = task;
-        });
+        tasks.forEach(i => console.log(i));
     })
     .catch(console.error);
