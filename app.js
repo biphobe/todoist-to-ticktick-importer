@@ -48,7 +48,7 @@ function createCsvRow(project, title, content, reminder, timezone) {
 function createTask(projects, labels, item) {
     const title = item.content;
     const project = projects[item.project_id].name;
-    const content = "";
+    const content = item.notes;
 
     const task = { title, project, content };
 
@@ -67,7 +67,15 @@ getTodoistData(todoistToken)
         const labels = convertArrayToObject(result.labels, "id");
 
         const tasks = result.items
-            .map((item) => createTask(projects, labels, item));
+            .map(item => {
+                item.notes = result.notes
+                    .filter(note => note.item_id === item.id)
+                    .map(note => `${note.posted}:\n${note.content}`)
+                    .join("\n---\n");
+
+                return item;
+            })
+            .map(item => createTask(projects, labels, item));
 
         tasks.forEach(i => console.log(i));
     })
