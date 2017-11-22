@@ -38,6 +38,12 @@ function convertArrayToObject(array, key) {
         }, {});
 }
 
+function createCsvRow(project, title, content, reminder, timezone) {
+    const values = [ project, title, content, "N", "", "", reminder, "", "0", "0", "", "0", timezone, "" ];
+
+    return values.map(el => `"${el}"`).join(", ");
+}
+
 getTodoistData(todoistToken)
     .then(result => {
         const projects = convertArrayToObject(result.projects, "id");
