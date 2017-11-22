@@ -1,6 +1,7 @@
 const fs = require("fs");
 
 const fetch = require("node-fetch");
+const moment = require("moment");
 
 require('dotenv').config();
 
@@ -20,13 +21,10 @@ function getTodoistData(token) {
 }
 
 function generateCsv(content, template) {
-    const date = new Date();
-    const year = date.getFullYear();
-    const month = date.getMonth()+1;
-    const day = date.getDate();
+    const date = moment().format("YYYY-MM-DD");
 
     return template
-        .replace("{{date}}", `${year}-${month}-${day}`)
+        .replace("{{date}}", date)
         .replace("{{content}}", content);
 }
 
