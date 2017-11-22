@@ -47,8 +47,9 @@ function createTask(projects, labels, item) {
     const title = item.content;
     const project = projects[item.project_id].name;
     const content = item.notes;
+    const reminder = item.reminder;
 
-    const task = { title, project, content };
+    const task = { title, project, content, reminder };
 
     if(item.length) {
         const labelString = item.labels.map(id => labels[id].name).join(" #");
@@ -68,8 +69,26 @@ getTodoistData(todoistToken)
             .map(item => {
                 item.notes = result.notes
                     .filter(note => note.item_id === item.id)
-                    .map(note => `${note.posted}:\n${note.content}`)
+                    .map(note => {
+                        const date = moment.parseZone(note.posted).format("MM.DD.YYYY HH:mm Z");
+                        const content = note.content;
+
+                        return `${date}:\n${content}`;
+                    })
                     .join("\n---\n");
+
+                return item;
+            })
+            .map(item => {
+                if(item.due_date_utc) {
+                    item.reminder = moment.parseZone(item.due_date_utc).format();
+                } else {
+                    item.reminder = result.reminders
+                        .filter(reminder => reminder.item_id === item.id)
+                        .map(reminder => moment.parseZone(item.due_date_utc).format())
+                        .slice(-1)
+                        .join("");
+                }
 
                 return item;
             })
