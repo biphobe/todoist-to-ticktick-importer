@@ -1,0 +1,8 @@
+﻿"Date: {{date}}+0000"
+"Version: 3.0"
+"Status: 
+0 Normal
+1 Completed
+2 Archived"
+"List Name","Title","Content","Is Checklist","Start Date","Due Date","Reminder","Repeat","Priority","Status","Completed Time","Order","Timezone","Is All Day"
+{{content}}
