@@ -5,10 +5,6 @@ const moment = require("moment");
 
 require('dotenv').config();
 
-const timezone = process.env.TIMEZONE;
-const todoistToken = process.env.TODOIST_TOKEN;
-const csvTemplate = fs.readFileSync("template.csv", "utf8");
-
 function getTodoistData(token) {
     return fetch("https://todoist.com/api/v7/sync", {
         headers: {
@@ -37,21 +33,23 @@ function convertArrayToObject(array, key) {
         }, {});
 }
 
-function createCsvRow(project, title, content, reminder, timezone) {
-    const values = [ project, title, content, "N", "", "", reminder, "", "0", "0", "", "0", timezone, "" ];
+function createCsvRow(project, title, content, date, timezone) {
+    const values = [ project, title, content, "N", date, date, "", "", "0", "0", "", "0", timezone ];
 
-    return values.map(el => `"${el}"`).join(", ");
+    return values
+        .map(el => `"${el}"`)
+        .join(",");
 }
 
-function createTask(projects, labels, item) {
+function reformatTask(projects, labels, item) {
     const title = item.content;
     const project = projects[item.project_id].name;
     const content = item.notes;
-    const reminder = item.reminder;
+    const date = item.date;
 
-    const task = { title, project, content, reminder };
+    const task = { title, project, content, date };
 
-    if(item.length) {
+    if(item.labels.length) {
         const labelString = item.labels.map(id => labels[id].name).join(" #");
 
         task.title += ` #${labelString}`;
@@ -60,40 +58,52 @@ function createTask(projects, labels, item) {
     return task;
 }
 
+function addNotesToTask(item, notes) {
+    item.notes = notes
+        .filter(note => note.item_id === item.id)
+        .map(note => {
+            const date = moment.parseZone(note.posted).format("DD.MM.YYYY HH:mm Z");
+            const content = note.content;
+
+            return `${date}:\n${content}`;
+        })
+        .join("\n---\n");
+
+    return item;
+}
+
+function addDateToTask(item, reminders) {
+    if(item.due_date_utc) {
+        item.date = moment.parseZone(item.due_date_utc).format("YYYY-MM-DDTHH:mm:ssZZ");
+    } else {
+        item.date = reminders
+            .filter(reminder => reminder.item_id === item.id)
+            .map(reminder => moment.parseZone(item.due_date_utc).format("YYYY-MM-DDTHH:mm:ssZZ"))
+            .slice(-1)
+            .join("");
+    }
+
+    return item;
+}
+
+const todoistToken = process.env.TODOIST_TOKEN;
+
 getTodoistData(todoistToken)
     .then(result => {
         const projects = convertArrayToObject(result.projects, "id");
         const labels = convertArrayToObject(result.labels, "id");
+        const timezone = process.env.TIMEZONE;
 
-        const tasks = result.items
-            .map(item => {
-                item.notes = result.notes
-                    .filter(note => note.item_id === item.id)
-                    .map(note => {
-                        const date = moment.parseZone(note.posted).format("MM.DD.YYYY HH:mm Z");
-                        const content = note.content;
+        const rows = result.items
+            .map(item => addNotesToTask(item, result.notes))
+            .map(item => addDateToTask(item, result.reminders))
+            .map(item => reformatTask(projects, labels, item))
+            .map(task => createCsvRow(task.project, task.title, task.content, task.date, timezone))
+            .join(",\n");
 
-                        return `${date}:\n${content}`;
-                    })
-                    .join("\n---\n");
+        const template = fs.readFileSync("template.csv", "utf8");
+        const csv = generateCsv(rows, template);
 
-                return item;
-            })
-            .map(item => {
-                if(item.due_date_utc) {
-                    item.reminder = moment.parseZone(item.due_date_utc).format();
-                } else {
-                    item.reminder = result.reminders
-                        .filter(reminder => reminder.item_id === item.id)
-                        .map(reminder => moment.parseZone(item.due_date_utc).format())
-                        .slice(-1)
-                        .join("");
-                }
-
-                return item;
-            })
-            .map(item => createTask(projects, labels, item));
-
-        tasks.forEach(i => console.log(i));
+        fs.writeFileSync(`${__dirname}/${process.env.OUTPUT_FILE}`, csv);
     })
     .catch(console.error);
