@@ -50,7 +50,9 @@ function reformatTask(projects, labels, item) {
     const task = { title, project, content, date };
 
     if(item.labels.length) {
-        const labelString = item.labels.map(id => labels[id].name).join(" #");
+        const labelString = item.labels
+            .map(id => labels[id].name)
+            .join(" #");
 
         task.title += ` #${labelString}`;
     }
@@ -58,11 +60,17 @@ function reformatTask(projects, labels, item) {
     return task;
 }
 
+function reformatDateForTicktick(date) {
+    return moment
+        .parseZone(item.date)
+        .format("YYYY-MM-DDTHH:mm:ssZZ");
+}
+
 function addNotesToTask(item, notes) {
     item.notes = notes
         .filter(note => note.item_id === item.id)
         .map(note => {
-            const date = moment.parseZone(note.posted).format("DD.MM.YYYY HH:mm Z");
+            const date = reformatDateForTicktick(note.posted);
             const content = note.content;
 
             return `${date}:\n${content}`;
@@ -74,11 +82,11 @@ function addNotesToTask(item, notes) {
 
 function addDateToTask(item, reminders) {
     if(item.due_date_utc) {
-        item.date = moment.parseZone(item.due_date_utc).format("YYYY-MM-DDTHH:mm:ssZZ");
+        item.date = reformatDateForTicktick(item.due_date_utc);
     } else {
         item.date = reminders
             .filter(reminder => reminder.item_id === item.id)
-            .map(reminder => moment.parseZone(item.due_date_utc).format("YYYY-MM-DDTHH:mm:ssZZ"))
+            .map(reminder => reformatDateForTicktick(item.due_date_utc))
             .slice(-1)
             .join("");
     }
